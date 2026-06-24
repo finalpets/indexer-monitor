@@ -75,7 +75,99 @@ REM Edit data\config.json with your values
 python monitor.py
 ```
 
-To run automatically, create a Windows Task Scheduler task that runs `python monitor.py` on startup or on a schedule. Set the working directory to the project folder.
+### Managing the monitor on Windows (PowerShell)
+
+**Run in background (terminal can be closed):**
+```powershell
+Start-Process python -ArgumentList "c:\path\to\nzbgeek-monitor\monitor.py" -WindowStyle Hidden
+```
+
+**Check if it's running:**
+```powershell
+Get-Process python -ErrorAction SilentlyContinue
+```
+
+**See running instance with its full command:**
+```powershell
+Get-WmiObject Win32_Process -Filter "Name='python.exe'" | Select-Object ProcessId, CommandLine
+```
+
+**Stop the monitor:**
+```powershell
+Stop-Process -Name python -Force
+```
+
+> **Note:** `Stop-Process -Name python -Force` will kill **all** Python processes. If you're running other Python scripts, stop by ProcessId instead:
+> ```powershell
+> Stop-Process -Id <PID> -Force
+> ```
+
+### Auto-start on Windows boot (Task Scheduler)
+
+1. Open **Task Scheduler** → Create Basic Task
+2. Trigger: **When the computer starts**
+3. Action: **Start a program**
+   - Program: `python`
+   - Arguments: `c:\path\to\nzbgeek-monitor\monitor.py`
+   - Start in: `c:\path\to\nzbgeek-monitor`
+4. In **Properties → General**, check **Run whether user is logged on or not**
+
+---
+
+## Method 4 — UNRAID (Python directly, no Docker)
+
+If you prefer not to use Docker, you can run the script directly from the UNRAID terminal.
+
+```bash
+# Install pip if needed
+python3 -m ensurepip --upgrade
+
+# Clone and set up
+git clone https://github.com/YOUR_USERNAME/nzbgeek-monitor.git /mnt/user/appdata/nzbgeek-monitor
+cd /mnt/user/appdata/nzbgeek-monitor
+
+pip3 install -r requirements.txt
+
+mkdir -p data
+cp config.example.json data/config.json
+# Edit data/config.json with your values
+nano data/config.json
+
+python3 monitor.py
+```
+
+### Managing the monitor on UNRAID / Linux
+
+**Run in background (survives closing the terminal):**
+```bash
+nohup python3 /mnt/user/appdata/nzbgeek-monitor/monitor.py > /mnt/user/appdata/nzbgeek-monitor/monitor.log 2>&1 &
+echo "PID: $!"
+```
+
+**Check if it's running:**
+```bash
+pgrep -a python3
+```
+
+**Watch the log in real time:**
+```bash
+tail -f /mnt/user/appdata/nzbgeek-monitor/monitor.log
+```
+
+**Stop the monitor:**
+```bash
+# Find the PID first
+pgrep -a python3
+
+# Then kill it
+kill <PID>
+```
+
+**Auto-start on UNRAID boot** — add a User Script (via the **User Scripts** plugin) set to run **At Startup of Array**:
+```bash
+#!/bin/bash
+nohup python3 /mnt/user/appdata/nzbgeek-monitor/monitor.py > /mnt/user/appdata/nzbgeek-monitor/monitor.log 2>&1 &
+```
 
 ---
 
