@@ -1,6 +1,7 @@
 {
   "discord_webhook_url": "https://discord.com/api/webhooks/CHANNEL_ID/TOKEN",
   "check_interval_hours": 2,
+  "trusted_groups": ["Ben.The.Men"],
   "indexers": [
     {
       "name": "NZBGeek",

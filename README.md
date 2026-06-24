@@ -177,7 +177,24 @@ nohup python3 /mnt/user/appdata/nzbgeek-monitor/monitor.py > /mnt/user/appdata/n
 |-------|------|-------------|
 | `discord_webhook_url` | string | Full Discord webhook URL |
 | `check_interval_hours` | number | How often to check (default: `2`) |
+| `trusted_groups` | array | Release groups that always publish in Spanish (optional) |
 | `indexers` | array | List of indexer configs (see below) |
+
+### Trusted release groups
+
+Some groups consistently release in Spanish or Latino regardless of what the title keywords say. Add them to `trusted_groups` and the monitor will notify every release from those groups automatically:
+
+```json
+"trusted_groups": ["Ben.The.Men", "OtherGroup"]
+```
+
+The group name must match exactly (case-insensitive) what appears **after the last `-`** in the release title. For example:
+
+```
+Ready.Or.Not.2.Here.I.Come.2026.1080p.BluRay.REMUX.MULTi-Ben.The.Men
+                                                                ^^^^^^^^^
+                                                                this part
+```
 
 **Per-indexer fields:**
 

@@ -91,13 +91,23 @@ def get_attrs(item):
     return result
 
 
-def is_spanish(item, mode):
+def get_release_group(title):
+    parts = title.rsplit("-", 1)
+    return parts[1].strip() if len(parts) == 2 else ""
+
+
+def is_spanish(item, mode, trusted_groups=None):
+    title = item.get("title", "")
+    if trusted_groups:
+        group = get_release_group(title)
+        if any(g.lower() == group.lower() for g in trusted_groups):
+            return True
     if mode == "api_and_title":
         attrs = get_attrs(item)
         lang = attrs.get("language", "").lower()
         if lang in ("es", "spa", "spanish", "castellano", "cast", "latino"):
             return True
-    return bool(SPANISH_RE.search(item.get("title", "")))
+    return bool(SPANISH_RE.search(title))
 
 
 def get_guid(item):
@@ -176,7 +186,7 @@ def send_discord(webhook_url, embeds):
             time.sleep(1)
 
 
-def check_indexer(indexer, seen, webhook_url):
+def check_indexer(indexer, seen, webhook_url, trusted_groups=None):
     name = indexer["name"]
     mode = indexer.get("language_detection", "title_only")
     log.info("[%s] Consultando API...", name)
@@ -191,7 +201,7 @@ def check_indexer(indexer, seen, webhook_url):
 
     new_embeds = []
     for item in items:
-        if not is_spanish(item, mode):
+        if not is_spanish(item, mode, trusted_groups):
             continue
         guid = get_guid(item)
         key = f"{name}:{guid}"
@@ -219,18 +229,21 @@ def run():
     webhook = config["discord_webhook_url"]
     interval_secs = config.get("check_interval_hours", 2) * 3600
     indexers = [i for i in config.get("indexers", []) if i.get("enabled", True)]
+    trusted_groups = config.get("trusted_groups", [])
 
     if not indexers:
         log.error("No hay indexers habilitados en config.json")
         raise SystemExit(1)
 
     log.info("NZB Monitor iniciado — indexers: %s", [i["name"] for i in indexers])
+    if trusted_groups:
+        log.info("Grupos de confianza: %s", trusted_groups)
     log.info("Intervalo de revisión: %.0fh", interval_secs / 3600)
 
     while True:
         seen = load_seen()
         for indexer in indexers:
-            check_indexer(indexer, seen, webhook)
+            check_indexer(indexer, seen, webhook, trusted_groups)
         seen = clean_seen(seen)
         save_seen(seen)
         log.info("Próxima revisión en %.0fh", interval_secs / 3600)
