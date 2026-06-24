@@ -1,0 +1,6 @@
+services:
+  nzbgeek-monitor:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data

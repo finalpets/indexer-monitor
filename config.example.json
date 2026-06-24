@@ -1,0 +1,24 @@
+{
+  "discord_webhook_url": "https://discord.com/api/webhooks/CHANNEL_ID/TOKEN",
+  "check_interval_hours": 2,
+  "indexers": [
+    {
+      "name": "NZBGeek",
+      "enabled": true,
+      "api_url": "https://api.nzbgeek.info/api",
+      "api_key": "YOUR_NZBGEEK_API_KEY",
+      "categories": "2000",
+      "result_limit": 100,
+      "language_detection": "api_and_title"
+    },
+    {
+      "name": "NinjaCentral",
+      "enabled": true,
+      "api_url": "https://ninjacentral.co.za/api",
+      "api_key": "YOUR_NINJACENTRAL_API_KEY",
+      "categories": "2000",
+      "result_limit": 100,
+      "language_detection": "title_only"
+    }
+  ]
+}
