@@ -21,7 +21,7 @@ SEEN_PATH = DATA_DIR / "seen.json"
 
 # Matches Spanish/Castellano indicators in release names (dot-separated words)
 SPANISH_RE = re.compile(
-    r"(?<![a-zA-Z])(spanish|castellano|cast|latino)(?![a-zA-Z])|\.es\.",
+    r"(?<![a-zA-Z])(spanish|castellano|cast|latino|latin)(?![a-zA-Z])|\.es\.",
     re.IGNORECASE,
 )
 
