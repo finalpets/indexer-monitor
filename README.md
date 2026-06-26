@@ -30,14 +30,80 @@ Title keywords matched: `SPANISH`, `CASTELLANO`, `CAST`, `LATINO`, `.ES.`
 
 ## Method 1 — UNRAID (Docker)
 
-1. Go to **Docker → Add Container** in your UNRAID dashboard
-2. Set the image to `ghcr.io/YOUR_GITHUB_USERNAME/nzbgeek-monitor:latest` (after pushing to GitHub)
-   - Or build locally: clone the repo on UNRAID and use **docker compose**
-3. Add a **Path** mapping:
-   - Container path: `/app/data`
-   - Host path: `/mnt/user/appdata/nzbgeek-monitor/`
-4. Create `/mnt/user/appdata/nzbgeek-monitor/config.json` based on `config.example.json`
-5. Start the container — check logs to confirm it's running
+> Replace `/mnt/user/yourfolder/indexer-monitor` with the actual path where you cloned the repo on your UNRAID server.
+
+### First-time setup
+
+```bash
+# Allow git to trust the directory (run once)
+git config --global --add safe.directory /mnt/user/yourfolder/indexer-monitor
+
+# Clone and configure
+git clone https://github.com/YOUR_USERNAME/indexer-monitor.git /mnt/user/yourfolder/indexer-monitor
+cd /mnt/user/yourfolder/indexer-monitor
+
+mkdir -p data
+cp config.example.json data/config.json
+nano data/config.json   # Add your API keys, webhook URL, and trusted groups
+
+# Build and start
+docker build -t indexer-monitor .
+docker run -d \
+  --name indexer-monitor \
+  --restart unless-stopped \
+  -v /mnt/user/yourfolder/indexer-monitor/data:/app/data \
+  indexer-monitor
+```
+
+### Common commands
+
+**Check logs in real time:**
+```bash
+docker logs -f indexer-monitor
+```
+
+**Stop the container:**
+```bash
+docker stop indexer-monitor
+```
+
+**Start it again:**
+```bash
+docker start indexer-monitor
+```
+
+**Restart (e.g. after editing config.json):**
+```bash
+docker restart indexer-monitor
+```
+
+**Check if it's running:**
+```bash
+docker ps | grep indexer-monitor
+```
+
+### Update to a new version
+
+```bash
+cd /mnt/user/yourfolder/indexer-monitor
+git pull
+docker build -t indexer-monitor .
+docker rm -f indexer-monitor && docker run -d \
+  --name indexer-monitor \
+  --restart unless-stopped \
+  -v /mnt/user/yourfolder/indexer-monitor/data:/app/data \
+  indexer-monitor
+docker logs -f indexer-monitor
+```
+
+### Add or change trusted groups (no rebuild needed)
+
+Edit `data/config.json` directly and restart:
+```bash
+nano /mnt/user/yourfolder/indexer-monitor/data/config.json
+docker restart indexer-monitor
+docker logs -f indexer-monitor
+```
 
 ---
 
