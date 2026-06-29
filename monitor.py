@@ -9,7 +9,7 @@ from pathlib import Path
 import requests
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -132,23 +132,44 @@ def get_imdb_id(attrs):
     return imdb
 
 
-def fetch_omdb_poster(imdb_id, omdb_key):
-    """Return poster URL from OMDB, or empty string if unavailable."""
-    if not imdb_id or not omdb_key:
+def parse_title_year(release_name):
+    """Extract a clean movie title and year from a release name."""
+    match = re.search(r'\b(19\d{2}|20\d{2})\b', release_name)
+    if not match:
+        return re.sub(r'[.\-_]', ' ', release_name).strip(), ""
+    year = match.group(1)
+    raw_title = release_name[:match.start()]
+    title = re.sub(r'[.\-_]', ' ', raw_title).strip()
+    title = re.sub(r'\s+', ' ', title)
+    return title, year
+
+
+def fetch_omdb_poster(imdb_id, omdb_key, release_title=""):
+    """Return poster URL from OMDB using IMDb ID or title+year fallback."""
+    if not omdb_key:
         return ""
     try:
-        resp = requests.get(
-            "https://www.omdbapi.com/",
-            params={"i": imdb_id, "apikey": omdb_key},
-            timeout=10,
-        )
+        if imdb_id:
+            params = {"i": imdb_id, "apikey": omdb_key}
+        elif release_title:
+            title, year = parse_title_year(release_title)
+            if not title:
+                return ""
+            params = {"t": title, "apikey": omdb_key}
+            if year:
+                params["y"] = year
+            log.debug("[OMDB] Buscando por título: '%s' (%s)", title, year)
+        else:
+            return ""
+        resp = requests.get("https://www.omdbapi.com/", params=params, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
-            poster = data.get("Poster", "")
-            if poster and poster != "N/A":
-                return poster
+            if data.get("Response") == "True":
+                poster = data.get("Poster", "")
+                if poster and poster != "N/A":
+                    return poster
     except Exception as e:
-        log.warning("OMDB error para %s: %s", imdb_id, e)
+        log.warning("OMDB error para '%s': %s", release_title or imdb_id, e)
     return ""
 
 
@@ -189,10 +210,8 @@ def build_embed(item, indexer_name, omdb_key=""):
         link = link.get("#text", "")
 
     imdb_id = get_imdb_id(attrs)
-    if not imdb_id:
-        log.debug("[OMDB] Sin IMDb ID para '%s' — attrs disponibles: %s", item.get("title", "?"), list(attrs.keys()))
     imdb_url = f"https://www.imdb.com/title/{imdb_id}/" if imdb_id else ""
-    poster_url = fetch_omdb_poster(imdb_id, omdb_key)
+    poster_url = fetch_omdb_poster(imdb_id, omdb_key, item.get("title", ""))
 
     description = f"**{item.get('title', '?')}**"
     if imdb_url:
