@@ -120,6 +120,38 @@ def get_guid(item):
     return str(guid) or item.get("link", "")
 
 
+def get_imdb_id(attrs):
+    imdb = attrs.get("imdb", attrs.get("imdbid", attrs.get("imdb_id", "")))
+    if not imdb:
+        return ""
+    imdb = str(imdb).strip()
+    if imdb.isdigit():
+        return f"tt{imdb.zfill(7)}"
+    if not imdb.startswith("tt"):
+        return f"tt{imdb}"
+    return imdb
+
+
+def fetch_omdb_poster(imdb_id, omdb_key):
+    """Return poster URL from OMDB, or empty string if unavailable."""
+    if not imdb_id or not omdb_key:
+        return ""
+    try:
+        resp = requests.get(
+            "https://www.omdbapi.com/",
+            params={"i": imdb_id, "apikey": omdb_key},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            poster = data.get("Poster", "")
+            if poster and poster != "N/A":
+                return poster
+    except Exception as e:
+        log.warning("OMDB error para %s: %s", imdb_id, e)
+    return ""
+
+
 def format_size(raw):
     try:
         size = int(raw)
@@ -146,7 +178,7 @@ def time_ago(pub_date_str):
         return pub_date_str or "—"
 
 
-def build_embed(item, indexer_name):
+def build_embed(item, indexer_name, omdb_key=""):
     attrs = get_attrs(item)
     enclosure = item.get("enclosure", {})
     size_raw = attrs.get("size") or enclosure.get("@length") or enclosure.get("length", "")
@@ -156,9 +188,17 @@ def build_embed(item, indexer_name):
     if isinstance(link, dict):
         link = link.get("#text", "")
 
+    imdb_id = get_imdb_id(attrs)
+    imdb_url = f"https://www.imdb.com/title/{imdb_id}/" if imdb_id else ""
+    poster_url = fetch_omdb_poster(imdb_id, omdb_key)
+
+    description = f"**{item.get('title', '?')}**"
+    if imdb_url:
+        description += f"\n[Ver en IMDb ↗]({imdb_url})"
+
     embed = {
         "title": f"\U0001f1ea\U0001f1f8 Nueva película — {indexer_name}",
-        "description": f"**{item.get('title', '?')}**",
+        "description": description,
         "color": DISCORD_COLOR,
         "fields": [
             {"name": "Tamaño", "value": format_size(size_raw), "inline": True},
@@ -170,6 +210,8 @@ def build_embed(item, indexer_name):
     }
     if link:
         embed["url"] = link
+    if poster_url:
+        embed["thumbnail"] = {"url": poster_url}
     return embed
 
 
@@ -186,7 +228,7 @@ def send_discord(webhook_url, embeds):
             time.sleep(1)
 
 
-def check_indexer(indexer, seen, webhook_url, trusted_groups=None):
+def check_indexer(indexer, seen, webhook_url, trusted_groups=None, omdb_key=""):
     name = indexer["name"]
     mode = indexer.get("language_detection", "title_only")
     log.info("[%s] Consultando API...", name)
@@ -207,7 +249,7 @@ def check_indexer(indexer, seen, webhook_url, trusted_groups=None):
         key = f"{name}:{guid}"
         if not guid or key in seen:
             continue
-        new_embeds.append(build_embed(item, name))
+        new_embeds.append(build_embed(item, name, omdb_key))
         seen[key] = datetime.now(timezone.utc).isoformat()
 
     if new_embeds:
@@ -230,6 +272,7 @@ def run():
     interval_secs = config.get("check_interval_hours", 2) * 3600
     indexers = [i for i in config.get("indexers", []) if i.get("enabled", True)]
     trusted_groups = config.get("trusted_groups", [])
+    omdb_key = config.get("omdb_api_key", "")
 
     if not indexers:
         log.error("No hay indexers habilitados en config.json")
@@ -238,12 +281,16 @@ def run():
     log.info("NZB Monitor iniciado — indexers: %s", [i["name"] for i in indexers])
     if trusted_groups:
         log.info("Grupos de confianza: %s", trusted_groups)
+    if omdb_key:
+        log.info("OMDB: pósters habilitados")
+    else:
+        log.info("OMDB: sin clave API, pósters desactivados")
     log.info("Intervalo de revisión: %.0fh", interval_secs / 3600)
 
     while True:
         seen = load_seen()
         for indexer in indexers:
-            check_indexer(indexer, seen, webhook, trusted_groups)
+            check_indexer(indexer, seen, webhook, trusted_groups, omdb_key)
         seen = clean_seen(seen)
         save_seen(seen)
         log.info("Próxima revisión en %.0fh", interval_secs / 3600)
