@@ -84,6 +84,14 @@ docker ps | grep indexer-monitor
 
 ### Update to a new version
 
+The repo includes a `restart.sh` script that does everything in one command: pulls the latest code, rebuilds the image, and recreates the container.
+
+```bash
+bash /mnt/user/yourfolder/indexer-monitor/restart.sh
+```
+
+Or manually step by step:
+
 ```bash
 cd /mnt/user/yourfolder/indexer-monitor
 git pull
@@ -242,6 +250,7 @@ nohup python3 /mnt/user/appdata/nzbgeek-monitor/monitor.py > /mnt/user/appdata/n
 | Field | Type | Description |
 |-------|------|-------------|
 | `discord_webhook_url` | string | Full Discord webhook URL |
+| `omdb_api_key` | string | OMDB API key for movie posters in notifications (optional). Get a free key at [omdbapi.com](https://www.omdbapi.com/apikey.aspx) — activate it via the confirmation email. |
 | `check_interval_hours` | number | How often to check (default: `2`) |
 | `trusted_groups` | array | Release groups that always publish in Spanish (optional) |
 | `indexers` | array | List of indexer configs (see below) |
