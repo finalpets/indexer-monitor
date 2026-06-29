@@ -9,7 +9,7 @@ from pathlib import Path
 import requests
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -189,6 +189,8 @@ def build_embed(item, indexer_name, omdb_key=""):
         link = link.get("#text", "")
 
     imdb_id = get_imdb_id(attrs)
+    if not imdb_id:
+        log.debug("[OMDB] Sin IMDb ID para '%s' — attrs disponibles: %s", item.get("title", "?"), list(attrs.keys()))
     imdb_url = f"https://www.imdb.com/title/{imdb_id}/" if imdb_id else ""
     poster_url = fetch_omdb_poster(imdb_id, omdb_key)
 
